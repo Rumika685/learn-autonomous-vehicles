@@ -61,14 +61,13 @@ def add_dynamic_obstacle(grid, path):
 # 初期状態
 grid = generate_grid()
 path = a_star(grid, START, GOAL)
-history = []
-point, = ax.plot([], [], "ro")
-trail_line, = ax.plot([], [], "b--")
+history = [START]
+current_index = [1]  # 次の移動先インデックス（path[1] からスタート）
 
 # アニメーション更新関数
-current_index = [0]
 def update(_):
     global path
+
     ax.clear()
     ax.set_aspect("equal")
     ax.set_xlim(-0.5, GRID_SIZE - 0.5)
@@ -85,31 +84,39 @@ def update(_):
     # スタート・ゴール
     sx, sy = START
     gx, gy = GOAL
-    ax.text(sx, sy, "START", color="green", ha="center", va="center")
-    ax.text(gx, gy, "GOAL", color="blue", ha="center", va="center")
+    ax.text(sx, sy, "START", color="green", ha="center", va="center", fontsize=9)
+    ax.text(gx, gy, "GOAL", color="blue", ha="center", va="center", fontsize=9)
 
-    # 再探索
-    path = a_star(grid, path[current_index[0]], GOAL)
+    # 経路がない or ゴールに到達したら終了
+    if not path or history[-1] == GOAL:
+        ax.set_title("Goal reached or blocked")
+        xs, ys = zip(*history)
+        ax.plot(xs, ys, "b--")
+        ax.plot(xs[-1], ys[-1], "ro")
+        return
 
-    # ゴール済み or 行き止まり
-    if not path or path[0] == GOAL:
-        ax.set_title("✅ Goal reached or blocked")
-        return trail_line, point
+    # 再探索（現在位置から再計算）
+    path = a_star(grid, history[-1], GOAL)
 
-    # 移動
-    current_index[0] = 1 if len(path) > 1 else 0
-    current_pos = path[current_index[0]]
-    history.append(current_pos)
+    # 到達不能
+    if not path:
+        ax.set_title("Blocked: No path found")
+        xs, ys = zip(*history)
+        ax.plot(xs, ys, "b--")
+        ax.plot(xs[-1], ys[-1], "ro")
+        return
 
-    # 新しい障害物を1つ追加
+    # 1歩進む
+    next_pos = path[1] if len(path) > 1 else path[0]
+    history.append(next_pos)
+
+    # 新たな障害物を追加
     add_dynamic_obstacle(grid, history)
 
-    # 履歴描画
+    # 表示
     xs, ys = zip(*history)
-    trail_line, = ax.plot(xs, ys, "b--")
-    point, = ax.plot(current_pos[0], current_pos[1], "ro")
-
-    return trail_line, point
+    ax.plot(xs, ys, "b--")
+    ax.plot(xs[-1], ys[-1], "ro")
 
 # アニメーション起動
 ani = animation.FuncAnimation(fig, update, interval=800)
